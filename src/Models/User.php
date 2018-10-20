@@ -36,6 +36,9 @@ class User implements \JsonSerializable
     /** @var int */
     private $bonus;
 
+    /** @var int */
+    private $version = 0;
+
     /**
      * @return int|null
      */
@@ -188,6 +191,24 @@ class User implements \JsonSerializable
         return $this;
     }
 
+    /**
+     * @return int
+     */
+    public function getVersion(): int
+    {
+        return $this->version;
+    }
+
+    /**
+     * @return User
+     */
+    public function incrementVersion(): User
+    {
+        $this->version++;
+
+        return $this;
+    }
+
     public function jsonSerialize()
     {
         return [
@@ -198,7 +219,8 @@ class User implements \JsonSerializable
             'country' => $this->country,
             'gender' => $this->gender,
             'bonusIncrements' => $this->bonusIncrements,
-            'bonus' => $this->bonus
+            'bonus' => $this->bonus,
+            'version' => $this->version
         ];
     }
 }

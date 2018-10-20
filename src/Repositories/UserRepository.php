@@ -9,29 +9,35 @@
 namespace App\Repositories;
 
 
+use App\Exceptions\ConcurrencyException;
 use App\Models\User;
 
 class UserRepository extends BaseRepository
 {
     /**
      * @param User $user
+     *
+     * @return int
+     * @throws ConcurrencyException
      */
-    public function save(User $user): void
+    public function save(User $user): int
     {
         if (!$user->getId()) {
-            $this->insert($user);
+            return $this->insert($user);
         } else {
-            $this->update($user);
+            return $this->update($user);
         }
     }
 
     /**
      * @param User $user
+     *
+     * @return int
      */
-    protected function insert(User $user): void
+    protected function insert(User $user): int
     {
-        $this->execute(
-            "INSERT INTO users (email, firstName, lastName, country, gender, bonusIncrements, bonus) VALUES (:email, :firstName, :lastName, :country, :gender, :bonusIncrements, :bonus)",
+        $query = $this->execute(
+            'INSERT INTO users (email, firstName, lastName, country, gender, bonusIncrements, bonus) VALUES (:email, :firstName, :lastName, :country, :gender, :bonusIncrements, :bonus)',
             [
                 ':email' => $user->getEmail(),
                 ':firstName' => $user->getFirstName(),
@@ -42,16 +48,21 @@ class UserRepository extends BaseRepository
                 ':bonus' => $user->getBonus()
             ]);
         $user->setId($this->connection->lastInsertId());
+
+        return $query->rowCount();
     }
 
     /**
      * @param User $user
+     *
+     * @return int
+     * @throws ConcurrencyException
      */
-    protected function update(User $user): void
+    protected function update(User $user): int
     {
-        $this->execute(
-            "UPDATE users SET email = :email, firstName = :firstName, lastName = :lastName, country = :country, gender = 
-:gender, bonusIncrements = :bonusIncrements, bonus = :bonus WHERE id = :id",
+        $query = $this->execute(
+            'UPDATE users SET email = :email, firstName = :firstName, lastName = :lastName, country = :country, gender = 
+:gender, bonusIncrements = :bonusIncrements, bonus = :bonus, version = version + 1 WHERE id = :id AND version = :version',
             [
                 ':id' => $user->getId(),
                 ':email' => $user->getEmail(),
@@ -60,8 +71,17 @@ class UserRepository extends BaseRepository
                 ':country' => $user->getCountry(),
                 ':gender' => $user->getGender(),
                 ':bonusIncrements' => $user->getBonusIncrements(),
-                ':bonus' => $user->getBonus()
+                ':bonus' => $user->getBonus(),
+                ':version' => $user->getVersion()
             ]);
+
+        if($query->rowCount() == 1) {
+            $user->incrementVersion();
+        } else {
+            throw new ConcurrencyException('User is stale, current version is ' . $user->getVersion(), 101);
+        }
+
+        return $query->rowCount();
     }
 
     /**
@@ -72,7 +92,7 @@ class UserRepository extends BaseRepository
     public function findById(int $id): ?User
     {
         $user = $this->execute(
-            "SELECT * FROM users WHERE id = ? LIMIT 1",
+            'SELECT * FROM users WHERE id = ? LIMIT 1',
             [$id]
         )->fetchObject(User::class);
 
@@ -87,7 +107,7 @@ class UserRepository extends BaseRepository
     public function findByEmail(string $email): ?User
     {
         $user = $this->execute(
-            "SELECT * FROM users WHERE email = ? LIMIT 1",
+            'SELECT * FROM users WHERE email = ? LIMIT 1',
             [$email]
         )->fetchObject(User::class);
 

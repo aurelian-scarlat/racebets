@@ -1,5 +1,6 @@
 <?php
 
+use App\Repositories\TransactionRepository;
 use App\Repositories\UserRepository;
 use App\Services\ContainerRegistrationService;
 use Psr\Container\ContainerInterface;
@@ -20,6 +21,7 @@ $container['db'] = function (ContainerInterface $container) {
 
 // Manually register the services
 ContainerRegistrationService::register($container, UserRepository::class);
+ContainerRegistrationService::register($container, TransactionRepository::class);
 
 require __DIR__ . '/routes.php';
 
