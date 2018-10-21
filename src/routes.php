@@ -1,6 +1,7 @@
 <?php
 
 use App\Controllers\DepositController;
+use App\Controllers\ReportController;
 use App\Controllers\UserController;
 use App\Controllers\WithdrawalController;
 use Slim\Http\Request;
@@ -15,3 +16,5 @@ $app->patch('/users/{id}', UserController::class . ':update');
 
 $app->post('/deposits', DepositController::class . ':create');
 $app->post('/withdrawals', WithdrawalController::class . ':create');
+
+$app->get('/reports', ReportController::class . ':daily');

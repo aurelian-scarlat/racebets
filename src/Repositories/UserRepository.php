@@ -10,6 +10,7 @@ namespace App\Repositories;
 
 
 use App\Exceptions\ConcurrencyException;
+use App\Models\Transaction;
 use App\Models\User;
 
 class UserRepository extends BaseRepository
@@ -112,5 +113,41 @@ class UserRepository extends BaseRepository
         )->fetchObject(User::class);
 
         return $user === false ? null : $user;
+    }
+
+    /**
+     * @param int      $startDate
+     * @param int|null $endDate
+     *
+     * @return array
+     */
+    public function transactionReportByDayAndCountry(int $startDate, ?int $endDate = null): array
+    {
+        $rows = $this->execute(
+            'SELECT 
+                        date(t.added, "unixepoch") AS day, t.type, u.country, 
+                        count(DISTINCT t.userId) AS customers, count(t.id) as transactions, 
+                        sum(t.amount) as amount
+                    FROM transactions AS t
+                    INNER JOIN users AS u ON t.userId = u.id
+                    WHERE t.type != :notType AND t.added >= :startDate AND t.added <= :endDate
+                    GROUP BY t.type, day, u.country
+                    ORDER BY day DESC',
+            [
+                ':notType' => Transaction::TYPE_BONUS,
+                ':startDate' => $startDate,
+                ':endDate' => $endDate ?? time()
+            ]
+        )->fetchAll();
+
+        $result = [];
+        foreach ($rows as $row){
+            $pre = $row['type'] == Transaction::TYPE_DEPOSIT ? 'deposit_' : 'withdrawal_';
+            $result[$row['day']][$row['country']][$pre . 'customers'] = $row['customers'];
+            $result[$row['day']][$row['country']][$pre . 'amount'] = $row['amount'];
+            $result[$row['day']][$row['country']][$pre . 'count'] = $row['transactions'];
+        }
+
+        return $result;
     }
 }
