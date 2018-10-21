@@ -6,7 +6,8 @@ ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-RUN mv $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
+# RUN mv $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
+RUN mv $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 
 RUN a2enmod rewrite
 
@@ -25,3 +26,5 @@ RUN curl --silent --fail --location --retry 3 --output /tmp/installer.php --url 
  && rm -rf /tmp/* /tmp/.htaccess
 
 RUN composer install
+
+RUN chmod 777 db.sqlite
